@@ -1491,6 +1491,57 @@ class TestAliases(object):
         op1.apply(time_M=2, u=u1)
         assert np.isclose(norm(u), norm(u1), rtol=1e-7)
 
+    @pytest.mark.parametrize('eq', [
+#        'Eq(u.forward, f*u.dx.dx)',
+        'Eq(u.forward, f*u.dx.dx + u.dy.dy)',
+#        'Eq(u.forward, f*u.dx.dx + u.dy.dy + v.dy.dy)',
+    ])
+    def test_custom_rotations(self, eq):
+        """
+        Test the low-level interface of the `cire-rotate` option.
+        """
+        grid = Grid(shape=(10, 10, 10))
+
+        f = Function(name='f', grid=grid)
+        u = TimeFunction(name='u', grid=grid, space_order=(2, 4, 4))
+        u1 = TimeFunction(name="u", grid=grid, space_order=(2, 4, 4))
+        ux = TimeFunction(name="u", grid=grid, space_order=(2, 4, 4))
+        uy = TimeFunction(name="u", grid=grid, space_order=(2, 4, 4))
+        uxy = TimeFunction(name="u", grid=grid, space_order=(2, 4, 4))
+
+        f.data[:] = 0.0012
+        u.data[:] = 1.3
+        u1.data[:] = 1.3
+        ux.data[:] = 1.3
+        uy.data[:] = 1.3
+        uxy.data[:] = 1.3
+
+        eq = eval(eq)
+
+        op0 = Operator(eq, opt=('noop', {'openmp': True}))
+        op1 = Operator(eq, opt=('advanced', {'openmp': True, 'cire-rotate': True}))
+        opx = Operator(eq, opt=('advanced', {'openmp': True, 'cire-rotate': 'x'}))
+        opy = Operator(eq, opt=('advanced', {'openmp': True, 'cire-rotate': 'y'}))
+        opxy = Operator(eq, opt=('advanced', {'openmp': True, 'cire-rotate': 'xy'}))
+
+        # Check code generation
+        #assert str(op1) == str(opx)
+        #TODO
+
+        # Check numerical output
+        op0.apply(time_M=2)
+        op1.apply(time_M=2, u=u1)
+        opx.apply(time_M=2, u=ux)
+        opy.apply(time_M=2, u=uy)
+        opxy.apply(time_M=2, u=uxy)
+
+        expected = norm(u)
+        assert np.isclose(expected, norm(u1), rtol=1e-7)
+        from IPython import embed; embed()
+        assert np.isclose(expected, norm(ux), rtol=1e-7)
+        assert np.isclose(expected, norm(uy), rtol=1e-7)
+        assert np.isclose(expected, norm(uxy), rtol=1e-7)
+
 
 # Acoustic
 class TestIsoAcoustic(object):
