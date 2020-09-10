@@ -452,7 +452,6 @@ def ForwardOperator(model, geometry, space_order=4,
 
     if tt_stencils:
         stencils += tt_stencils
-        import pdb; pdb.set_trace()
         return Operator(stencils, subs=model.spacing_map, name='ForwardTTI', **kwargs)
 
     # Source and receivers
@@ -462,7 +461,6 @@ def ForwardOperator(model, geometry, space_order=4,
     # stencils += rec.interpolate(expr=u + v)
 
     # Substitute spacing terms to reduce flops
-    import pdb; pdb.set_trace()
     return Operator(stencils, subs=model.spacing_map, name='ForwardTTI', **kwargs)
 
 
