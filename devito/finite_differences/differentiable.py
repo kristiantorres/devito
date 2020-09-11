@@ -6,7 +6,7 @@ from sympy.functions.elementary.integers import floor
 from sympy.core.evalf import evalf_table
 
 from cached_property import cached_property
-from devito.finite_differences.lazy import Evaluable
+from devito.finite_differences.lazy import Evaluable, EvalDerivative
 from devito.logger import warning
 from devito.tools import filter_ordered, flatten
 from devito.types.utils import DimensionTuple
@@ -401,6 +401,11 @@ class Mod(DifferentiableOp, sympy.Mod):
     __new__ = DifferentiableOp.__new__
 
 
+class EvalDiffDerivative(DifferentiableOp, sympy.Add):
+    __sympy_class__ = EvalDerivative
+    __new__ = DifferentiableOp.__new__
+
+
 class diffify(object):
 
     """
@@ -457,6 +462,7 @@ class diffify(object):
     @_cls.register(Mul)
     @_cls.register(Pow)
     @_cls.register(Mod)
+    @_cls.register(EvalDiffDerivative)
     def _(obj):
         return obj.__class__
 
