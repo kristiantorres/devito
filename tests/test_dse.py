@@ -1505,12 +1505,12 @@ class TestAliases(object):
 
     @switchconfig(profiling='advanced')
     @pytest.mark.parametrize('expr,exp_arrays,exp_ops', [
-#        ('f.dx.dx + g.dx.dx', (1, 2, 1), 18),
-        ('v.dx.dx + p.dx.dx', (1, 1, 1), 22),  #TODO: check why staggered derivative only has 1 term
-#        ('(v.dx + v.dy).dx - (v.dx + v.dy).dy + 2*f.dx.dx + f*f.dy.dy + f.dx.dx(x0=1)',
-#         (3, 4, 3), 92),
-#        ('(g*(1 + f)*v.dx).dx + (2*g*f*v.dx).dx', (1, 2, 1), 20),
-#        ('g*(f.dx.dx + g.dx.dx)', (1, 2, 1), 19),  #TODO: check computed values... 0.000x vs 0
+        ('f.dx.dx + g.dx.dx', (1, 2, 1), 18),
+        ('v.dx.dx + p.dx.dx', (2, 2, 2), 26),
+        ('(v.dx + v.dy).dx - (v.dx + v.dy).dy + 2*f.dx.dx + f*f.dy.dy + f.dx.dx(x0=1)',
+         (3, 4, 3), 92),
+        ('(g*(1 + f)*v.dx).dx + (2*g*f*v.dx).dx', (1, 2, 1), 20),
+        ('g*(f.dx.dx + g.dx.dx)', (1, 2, 1), 19),  #TODO: check computed values... 0.000x vs 0
     ])
     def test_sum_of_nested_derivatives(self, expr, exp_arrays, exp_ops):
         """
@@ -1535,25 +1535,25 @@ class TestAliases(object):
 
         eqn = Eq(v.forward, eval(expr))
 
-        #op0 = Operator(eqn, opt=('noop', {'openmp': True}))
+        op0 = Operator(eqn, opt=('noop', {'openmp': True}))
         op1 = Operator(eqn, opt=('advanced', {'openmp': True}))
-        #op2 = Operator(eqn, opt=('cire-sops', {'openmp': True, 'cire-maxalias': True}))
-        #op3 = Operator(eqn, opt=('advanced', {'openmp': True, 'cire-maxalias': True}))
+        op2 = Operator(eqn, opt=('cire-sops', {'openmp': True, 'cire-maxalias': True}))
+        op3 = Operator(eqn, opt=('advanced', {'openmp': True, 'cire-maxalias': True}))
 
         # Check code generation
         arrays = [i for i in FindSymbols().visit(op1._func_table['bf0'].root)
                   if i.is_Array and i._mem_local]
         assert len(arrays) == exp_arrays[0]
-        #arrays = [i for i in FindSymbols().visit(op2) if i.is_Array]
-        #assert len(arrays) == exp_arrays[1]
-        #arrays = [i for i in FindSymbols().visit(op3._func_table['bf0'].root)
-        #          if i.is_Array and i._mem_local]
-        #assert len(arrays) == exp_arrays[2]
+        arrays = [i for i in FindSymbols().visit(op2) if i.is_Array]
+        assert len(arrays) == exp_arrays[1]
+        arrays = [i for i in FindSymbols().visit(op3._func_table['bf0'].root)
+                  if i.is_Array and i._mem_local]
+        assert len(arrays) == exp_arrays[2]
 
         # Check numerical output
-        #op0(time_M=1)
+        op0(time_M=1)
         summary = op1(time_M=1, v=v1)
-        #assert np.isclose(norm(v), norm(v1), atol=1e-5, rtol=0)  #TODO: relax tolerances, use rtol
+        assert np.isclose(norm(v), norm(v1), atol=1e-5, rtol=0)  #TODO: relax tolerances, use rtol
 
         # Also check against expected operation count to make sure
         # all redundancies have been detected correctly

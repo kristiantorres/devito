@@ -74,7 +74,12 @@ def _doit(expr):
         ax, term = _doit(a)
         args.append(ax)
         terms.append(term)
-    expr = expr.func(*args, evaluate=False)
+    try:
+        expr = expr.func(*args, evaluate=False)
+    except TypeError:
+        # Not all types support `evaluate` (e.g., TensorFunction)
+        from IPython import embed; embed()
+        expr = expr.func(*args)
     return _doit_handle(expr, terms)
 
 
