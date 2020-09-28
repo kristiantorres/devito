@@ -1,7 +1,8 @@
 from devito import Function, TimeFunction
 from devito.tools import memoized_meth
+from examples.seismic import PointSource
 from examples.seismic.acoustic.operators import (
-    ForwardOperator, AdjointOperator, GradientOperator, BornOperator
+    ForwardOperator, AdjointOperator, GradientOperator, GradientOperator_precon, BornOperator
 )
 from examples.checkpointing.checkpoint import DevitoCheckpoint, CheckpointOperator
 from pyrevolve import Revolver
@@ -27,10 +28,9 @@ class AcousticWaveSolver(object):
     """
     def __init__(self, model, geometry, kernel='OT2', space_order=4, **kwargs):
         self.model = model
-        self.model._initialize_bcs(bcs="damp")
         self.geometry = geometry
 
-        assert self.model.grid == geometry.grid
+        assert self.model == geometry.model
 
         self.space_order = space_order
         self.kernel = kernel
@@ -63,6 +63,13 @@ class AcousticWaveSolver(object):
     def op_grad(self, save=True):
         """Cached operator for gradient runs"""
         return GradientOperator(self.model, save=save, geometry=self.geometry,
+                                kernel=self.kernel, space_order=self.space_order,
+                                **self._kwargs)
+
+    @memoized_meth
+    def op_grad_precon(self, save=True):
+        """Cached operator for gradient + precon runs"""
+        return GradientOperator_precon(self.model, save=save, geometry=self.geometry,
                                 kernel=self.kernel, space_order=self.space_order,
                                 **self._kwargs)
 
@@ -136,7 +143,9 @@ class AcousticWaveSolver(object):
         Adjoint source, wavefield and performance summary.
         """
         # Create a new adjoint source and receiver symbol
-        srca = srca or self.geometry.new_src(name='srca', src_type=None)
+        srca = srca or PointSource(name='srca', grid=self.model.grid,
+                                   time_range=self.geometry.time_axis,
+                                   coordinates=self.geometry.src_positions)
 
         # Create the adjoint wavefield if not provided
         v = v or TimeFunction(name='v', grid=self.model.grid,
@@ -150,7 +159,7 @@ class AcousticWaveSolver(object):
                                       dt=kwargs.pop('dt', self.dt), **kwargs)
         return srca, v, summary
 
-    def jacobian_adjoint(self, rec, u, v=None, grad=None, vp=None,
+    def jacobian_adjoint(self, rec, u, v=None, grad=None, precon=None, vp=None,
                          checkpointing=False, **kwargs):
         """
         Gradient modelling function for computing the adjoint of the
@@ -176,8 +185,7 @@ class AcousticWaveSolver(object):
         """
         dt = kwargs.pop('dt', self.dt)
         # Gradient symbol
-        grad = grad or Function(name='grad', grid=self.model.grid)
-
+        grad = grad or Function(name='grad', grid=self.model.grid)        
         # Create the forward wavefield
         v = v or TimeFunction(name='v', grid=self.model.grid,
                               time_order=2, space_order=self.space_order)
@@ -200,7 +208,12 @@ class AcousticWaveSolver(object):
             wrp.apply_forward()
             summary = wrp.apply_reverse()
         else:
-            summary = self.op_grad().apply(rec=rec, grad=grad, v=v, u=u, vp=vp,
+            if precon is not None:
+                precon = precon #don't know if this is needded but I'll just follow style
+                summary = self.op_grad_precon().apply(rec=rec, grad=grad, precon=precon, v=v, u=u, vp=vp,
+                                           dt=dt, **kwargs)
+            else:
+                summary = self.op_grad().apply(rec=rec, grad=grad, v=v, u=u, vp=vp,
                                            dt=dt, **kwargs)
         return grad, summary
 

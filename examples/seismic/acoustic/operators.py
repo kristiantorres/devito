@@ -225,6 +225,54 @@ def GradientOperator(model, geometry, space_order=4, save=True,
                     name='Gradient', **kwargs)
 
 
+def GradientOperator_precon(model, geometry, space_order=4, save=True,
+                     kernel='OT2', **kwargs):
+    """
+    Construct a gradient operator in an acoustic media.
+    This also calculates source wavefield illumination if called.
+
+    Parameters
+    ----------
+    model : Model
+        Object containing the physical parameters.
+    geometry : AcquisitionGeometry
+        Geometry object that contains the source (SparseTimeFunction) and
+        receivers (SparseTimeFunction) and their position.
+    space_order : int, optional
+        Space discretization order.
+    save : int or Buffer, optional
+        Option to store the entire (unrolled) wavefield.
+    kernel : str, optional
+        Type of discretization, centered or shifted.
+    """
+    m = model.m
+
+    # Gradient symbol and wavefield symbols
+    grad = Function(name='grad', grid=model.grid)
+    precon = Function(name='precon', grid=model.grid)
+    u = TimeFunction(name='u', grid=model.grid, save=geometry.nt if save
+                     else None, time_order=2, space_order=space_order)
+    v = TimeFunction(name='v', grid=model.grid, save=None,
+                     time_order=2, space_order=space_order)
+    rec = Receiver(name='rec', grid=model.grid, time_range=geometry.time_axis,
+                   npoint=geometry.nrec)
+
+    s = model.grid.stepping_dim.spacing
+    eqn = iso_stencil(v, model, kernel, forward=False)
+
+    if kernel == 'OT2':
+        gradient_update = Inc(grad, - u.dt2 * v)
+        precon_update = Inc(precon, - u * u)
+    elif kernel == 'OT4':
+        gradient_update = Inc(grad, - (u.dt2 + s**2 / 12.0 * u.biharmonic(m**(-2))) * v)
+    # Add expression for receiver injection
+    receivers = rec.inject(field=v.backward, expr=rec * s**2 / m)
+
+    # Substitute spacing terms to reduce flops
+    return Operator(eqn + receivers + [gradient_update] + [precon_update] , subs=model.spacing_map,
+                    name='Gradient_precon', **kwargs)
+
+
 def BornOperator(model, geometry, space_order=4,
                  kernel='OT2', **kwargs):
     """
