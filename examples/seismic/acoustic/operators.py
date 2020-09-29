@@ -262,7 +262,7 @@ def GradientOperator_precon(model, geometry, space_order=4, save=True,
 
     if kernel == 'OT2':
         gradient_update = Inc(grad, - u.dt2 * v)
-        precon_update = Inc(precon, - u * u)
+        precon_update = Inc(precon, + u * u)
     elif kernel == 'OT4':
         gradient_update = Inc(grad, - (u.dt2 + s**2 / 12.0 * u.biharmonic(m**(-2))) * v)
     # Add expression for receiver injection

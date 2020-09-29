@@ -141,7 +141,7 @@ def plot_shotrecord(rec, model, t0, tn, colorbar=True, file_name=None):
     plt.show()
     
 
-def plot_image(data, vmin=None, vmax=None, colorbar=True, cmap="gray",file_name=None):
+def plot_image(data, vmin=None, vmax=None, colorbar=True, cmap="gray", pclip=None, file_name=None):
     """
     Plot image data, such as RTM images or FWI gradients.
 
@@ -153,6 +153,12 @@ def plot_image(data, vmin=None, vmax=None, colorbar=True, cmap="gray",file_name=
         Choice of colormap. Defaults to gray scale for images as a
         seismic convention.
     """
+    if pclip is not None:
+        a = -np.quantile(np.abs(data[:]),(pclip/100))
+        b = -a
+        vmin=a
+        vmax=b
+
     plot = plt.imshow(np.transpose(data),
                       vmin=vmin or 0.9 * np.min(data),
                       vmax=vmax or 1.1 * np.max(data),
