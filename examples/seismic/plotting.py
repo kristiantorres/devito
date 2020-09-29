@@ -12,7 +12,7 @@ except:
     cm = None
 
 
-def plot_perturbation(model, model1, colorbar=True):
+def plot_perturbation(model, model1, colorbar=True, file_name=None):
     """
     Plot a two-dimensional velocity perturbation from two seismic `Model`
     objects.
@@ -44,10 +44,12 @@ def plot_perturbation(model, model1, colorbar=True):
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = plt.colorbar(plot, cax=cax)
         cbar.set_label('Velocity perturbation (km/s)')
-    plt.show()
+    if file_name is not None:
+        file_name = (file_name if str.endswith(file_name,'.pdf') else file_name+'.pdf')
+        plt.savefig(file_name)
+    plt.show()     
 
-
-def plot_velocity(model, source=None, receiver=None, colorbar=True, cmap="jet"):
+def plot_velocity(model, source=None, receiver=None, colorbar=True, cmap="jet", file_name=None):
     """
     Plot a two-dimensional velocity field from a seismic `Model`
     object. Optionally also includes point markers for sources and receivers.
@@ -99,10 +101,12 @@ def plot_velocity(model, source=None, receiver=None, colorbar=True, cmap="jet"):
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = plt.colorbar(plot, cax=cax)
         cbar.set_label('Velocity (km/s)')
+    if file_name is not None:
+        file_name = (file_name if str.endswith(file_name,'.pdf') else file_name+'.pdf')
+        plt.savefig(file_name) 
     plt.show()
 
-
-def plot_shotrecord(rec, model, t0, tn, colorbar=True):
+def plot_shotrecord(rec, model, t0, tn, colorbar=True, file_name=None):
     """
     Plot a shot record (receiver values over time).
 
@@ -131,10 +135,13 @@ def plot_shotrecord(rec, model, t0, tn, colorbar=True):
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         plt.colorbar(plot, cax=cax)
+    if file_name is not None:
+        file_name = (file_name if str.endswith(file_name,'.pdf') else file_name+'.pdf')
+        plt.savefig(file_name)     
     plt.show()
+    
 
-
-def plot_image(data, vmin=None, vmax=None, colorbar=True, cmap="gray"):
+def plot_image(data, vmin=None, vmax=None, colorbar=True, cmap="gray",file_name=None):
     """
     Plot image data, such as RTM images or FWI gradients.
 
@@ -157,4 +164,9 @@ def plot_image(data, vmin=None, vmax=None, colorbar=True, cmap="gray"):
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         plt.colorbar(plot, cax=cax)
+    if file_name is not None:
+        file_name = (file_name if str.endswith(file_name,'.pdf') else file_name+'.pdf')
+        plt.savefig(file_name)  
     plt.show()
+    
+
